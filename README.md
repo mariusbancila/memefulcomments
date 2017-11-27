@@ -37,7 +37,7 @@ To display images, including animated ones, in your source code in any of the su
 | Attribute  | Required | Description | 
 | ------------- | ------------- |------------- |
 | `url` or `src`  | Yes  | Represents the source of the image. It can be either from a local disk or from web. If the file is from the local disk it can be either absolute or relative to the document path. |
-| `scale`  | No  | Indicates a scaling factor for the image. Notice that a very large scale might make the image impossible to display.|
+| `scale`  | No  | Indicates a scaling factor for the image. Notice that a very large scale might make the image impossible to display. Invariant culture is used for parsing the value, therefore always use dot for the decimal point.|
 
 ### Credits
 This extension is based on the [image-comments](https://github.com/lukesdm/image-comments) extensions by [Luke McQuade](https://github.com/lukesdm).
