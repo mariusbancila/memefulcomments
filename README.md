@@ -1,4 +1,4 @@
-# memefulcomments
+# Memeful Comments
 Enables displaying images, including animated GIFs, throughout source code from an &lt;image> tag.
 
 This Visual Studio extension enables displaying images, including animated GIFs, alongside your code to enhance explanations with visuals or simply to express your reaction to the code. You can easily show your co-workers, with only a comment line, how you facepalmed yourself when you saw what they checked in recently.
