@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2009
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MemefulComments", "MemefulComments\MemefulComments.csproj", "{F6DA3013-4F85-4967-A7B9-F8AF9CC42B01}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F6DA3013-4F85-4967-A7B9-F8AF9CC42B01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6DA3013-4F85-4967-A7B9-F8AF9CC42B01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6DA3013-4F85-4967-A7B9-F8AF9CC42B01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6DA3013-4F85-4967-A7B9-F8AF9CC42B01}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {777967B1-5B02-4D5D-84D2-FCF09E8E1B4C}
+	EndGlobalSection
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 2
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://mariusbancila.visualstudio.com/
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = MemefulComments\\MemefulComments.csproj
+		SccProjectName1 = MemefulComments
+		SccLocalPath1 = MemefulComments
+	EndGlobalSection
+EndGlobal
