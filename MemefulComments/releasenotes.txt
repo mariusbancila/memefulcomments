@@ -3,6 +3,10 @@ Memeful Comments Release Notes
 copyright Marius Bancila (c) 2017
 =================================
 
+v1.2.0
+- fixed problem with Visual Studio hanging
+- use invariant culture for the scale
+
 v1.1.0
 - support for images relative to the document path
 - performance improvements (images displayed only after user stops editing the image tag)

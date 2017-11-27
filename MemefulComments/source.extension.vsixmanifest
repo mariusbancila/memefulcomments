@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="MemefulComments.9d378bf5-a506-4006-bfaf-53b8b35f19b0" Version="1.1" Language="en-US" Publisher="Marius Bancila" />
+        <Identity Id="MemefulComments.9d378bf5-a506-4006-bfaf-53b8b35f19b0" Version="1.2" Language="en-US" Publisher="Marius Bancila" />
         <DisplayName>Memeful Comments</DisplayName>
-        <Description xml:space="preserve">Enables displaying images, including animated GIFs, throughout source code from an &lt;image&gt; tag </Description>
+        <Description xml:space="preserve">Enables displaying images, including animated GIFs, throughout source code from an &lt;image&gt; tag.</Description>
         <GettingStartedGuide>usermanual.txt</GettingStartedGuide>
         <ReleaseNotes>releasenotes.txt</ReleaseNotes>
         <PreviewImage>screenshot.png</PreviewImage>

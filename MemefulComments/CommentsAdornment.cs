@@ -53,7 +53,6 @@ namespace MemefulComments
       private ThreadSafeDictionary<int, ITextViewLine> _editedLines = new ThreadSafeDictionary<int, ITextViewLine>();
 
       private System.Timers.Timer _timer = new System.Timers.Timer(200);
-      private object _locker = new object();
 
       private class ImageParameters
       {
@@ -90,42 +89,46 @@ namespace MemefulComments
 
       internal void OnLayoutChanged(object sender, TextViewLayoutChangedEventArgs e)
       {
-         if (!Enabled)
-            return;
-
-         _errorTags.Clear();
-         TagsChanged?.Invoke(
-            this, 
-            new SnapshotSpanEventArgs(
-               new SnapshotSpan(
-                  _view.TextSnapshot, 
-                  new Span(0, _view.TextSnapshot.Length))));
-
-         lock (_locker)
+         try
          {
+            if (!Enabled)
+               return;
+
+            _errorTags.Clear();
+            TagsChanged?.Invoke(
+               this,
+               new SnapshotSpanEventArgs(
+                  new SnapshotSpan(
+                     _view.TextSnapshot,
+                     new Span(0, _view.TextSnapshot.Length))));
+
             foreach (ITextViewLine line in e.NewOrReformattedLines)
             {
                int lineNumber = line.Snapshot.GetLineFromPosition(line.Start.Position).LineNumber;
 
                _editedLines[lineNumber] = line;
             }
-         }
 
-         ResetTimer();
+            ResetTimer();
 
-         // Sometimes, on loading a file in an editor view, the line transform gets triggered before the image adornments 
-         // have been added, so the lines don't resize to the image height. So here's a workaround:
-         // Changing the zoom level triggers the required update.
-         // Need to do it twice - once to trigger the event, and again to change it back to the user's expected level.
-         if (!_initialised1)
-         {
-            _view.ZoomLevel++;
-            _initialised1 = true;
+            // Sometimes, on loading a file in an editor view, the line transform gets triggered before the image adornments 
+            // have been added, so the lines don't resize to the image height. So here's a workaround:
+            // Changing the zoom level triggers the required update.
+            // Need to do it twice - once to trigger the event, and again to change it back to the user's expected level.
+            if (!_initialised1)
+            {
+               _view.ZoomLevel++;
+               _initialised1 = true;
+            }
+            if (!_initialised2)
+            {
+               _view.ZoomLevel--;
+               _initialised2 = true;
+            }
          }
-         if (!_initialised2)
+         catch(Exception ex)
          {
-            _view.ZoomLevel--;
-            _initialised2 = true;
+            ExceptionHandler.Notify(ex, true);
          }
       }
 
@@ -139,22 +142,20 @@ namespace MemefulComments
       {
          _timer.Stop();
 
-         string filepath = null;
-         if (_textDocumentFactory != null &&
-            _textDocumentFactory.TryGetTextDocument(_view.TextBuffer, out ITextDocument textDocument))
+         Application.Current.Dispatcher.Invoke(() =>
          {
-            filepath = textDocument.FilePath;
-         }
+            string filepath = null;
+            if (_textDocumentFactory != null &&
+               _textDocumentFactory.TryGetTextDocument(_view.TextBuffer, out ITextDocument textDocument))
+            {
+               filepath = textDocument.FilePath;
+            }
 
-         lock (_locker)
-         {
             foreach (var kvp in _editedLines)
             {
                try
                {
-                  Application.Current.Dispatcher.Invoke(
-                     () =>
-                     CreateVisuals(kvp.Value, kvp.Key, filepath));
+                  CreateVisuals(kvp.Value, kvp.Key, filepath);
                }
                catch (InvalidOperationException ex)
                {
@@ -163,71 +164,106 @@ namespace MemefulComments
             }
 
             _editedLines.Clear();
-         }
+         });
       }
 
       private void CreateVisuals(ITextViewLine line, int lineNumber, string filepath)
       {
-         Trace.WriteLine($"VISUALS: {lineNumber}");
-         var lineText = line.Extent.GetText();
-         var matchIndex = CommentImageParser.Match(_contentTypeName, lineText, out string matchedText);
-         if (matchIndex >= 0)
+         try
          {
-            // Get coordinates of text
-            var start = line.Extent.Start.Position + matchIndex;
-            var end = line.Start + (line.Extent.Length - 1);
-            var span = new SnapshotSpan(_view.TextSnapshot, Span.FromBounds(start, end));
-
-            CommentImageParser.TryParse(
-               matchedText, 
-               out string imageUrl, out double scale, out Exception xmlParseException);
-
-            if (xmlParseException != null)
+            var lineText = line.Extent.GetText();
+            var matchIndex = CommentImageParser.Match(_contentTypeName, lineText, out string matchedText);
+            if (matchIndex >= 0)
             {
-               if (Images.ContainsKey(lineNumber))
+               // Get coordinates of text
+               var start = line.Extent.Start.Position + matchIndex;
+               var end = line.Start + (line.Extent.Length - 1);
+               var span = new SnapshotSpan(_view.TextSnapshot, Span.FromBounds(start, end));
+
+               CommentImageParser.TryParse(
+                  matchedText,
+                  out string imageUrl, out double scale, out Exception xmlParseException);
+
+               if (xmlParseException != null)
                {
-                  _layer.RemoveAdornment(Images[lineNumber]);
-                  Images.Remove(lineNumber);
+                  if (Images.ContainsKey(lineNumber))
+                  {
+                     _layer.RemoveAdornment(Images[lineNumber]);
+                     Images.Remove(lineNumber);
+                  }
+
+                  _errorTags.Add(
+                     new TagSpan<ErrorTag>(
+                        span,
+                        new ErrorTag("XML parse error", GetErrorMessage(xmlParseException))));
+
+                  return;
                }
 
-               _errorTags.Add(
-                  new TagSpan<ErrorTag>(
-                     span, 
-                     new ErrorTag("XML parse error", GetErrorMessage(xmlParseException))));
-
-               return;
-            }
-
-            // Check for and update existing image
-            CommentImage image = Images.ContainsKey(lineNumber) ? Images[lineNumber] : null;
-            var reload = false;
-            if (image != null)
-            {
-               if (image.OriginalUrl == imageUrl && image.Scale != scale)
+               // Check for and update existing image
+               CommentImage image = Images.ContainsKey(lineNumber) ? Images[lineNumber] : null;
+               var reload = false;
+               if (image != null)
                {
-                  // URL same but scale changed
-                  image.Scale = scale;
+                  if (image.OriginalUrl == imageUrl && image.Scale != scale)
+                  {
+                     // URL same but scale changed
+                     image.Scale = scale;
+                     reload = true;
+                  }
+                  else if (image.OriginalUrl != imageUrl)
+                  {
+                     // URL different, must load from new source
+                     reload = true;
+                  }
+               }
+               else
+               {
+                  // no existing image, so create new one
+                  image = new CommentImage();
+                  Images.Add(lineNumber, image);
+
                   reload = true;
                }
-               else if (image.OriginalUrl != imageUrl)
+
+               var originalUrl = imageUrl;
+               if (reload)
                {
-                  // URL different, must load from new source
-                  reload = true;
+                  if (_processingUris.Contains(imageUrl)) return;
+
+                  if (imageUrl.ToLower().StartsWith("http"))
+                  {
+                     if (ImageCache.Instance.TryGetValue(imageUrl, out string localPath))
+                     {
+                        imageUrl = localPath;
+                     }
+                     else
+                     {
+                        _processingUris.Add(imageUrl);
+                        var tempPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(imageUrl));
+                        WebClient client = new WebClient();
+                        client.DownloadDataCompleted += Client_DownloadDataCompleted;
+
+                        _toaddImages.Add(
+                           client,
+                           new ImageParameters()
+                           {
+                              Uri = imageUrl,
+                              LocalPath = tempPath,
+                              Image = image,
+                              Line = line,
+                              LineNumber = lineNumber,
+                              Span = span,
+                              Scale = scale,
+                              Filepath = filepath
+                           });
+
+                        client.DownloadDataAsync(new Uri(imageUrl));
+
+                        return;
+                     }
+                  }
                }
-            }
-            else 
-            {
-               // no existing image, so create new one
-               image = new CommentImage();
-               Images.Add(lineNumber, image);
-
-               reload = true;
-            }
-
-            var originalUrl = imageUrl;
-            if (reload)
-            {
-               if (_processingUris.Contains(imageUrl)) return;
 
                if (imageUrl.ToLower().StartsWith("http"))
                {
@@ -235,99 +271,84 @@ namespace MemefulComments
                   {
                      imageUrl = localPath;
                   }
-                  else
-                  {
-                     _processingUris.Add(imageUrl);
-                     var tempPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(imageUrl));
-                     WebClient client = new WebClient();
-                     client.DownloadDataCompleted += Client_DownloadDataCompleted;
-
-                     _toaddImages.Add(
-                        client,
-                        new ImageParameters()
-                        {
-                           Uri = imageUrl,
-                           LocalPath = tempPath,
-                           Image = image,
-                           Line = line,
-                           LineNumber = lineNumber,
-                           Span = span,
-                           Scale = scale,
-                           Filepath = filepath
-                        });
-
-                     client.DownloadDataAsync(new Uri(imageUrl));
-
-                     return;
-                  }
                }
+               ProcessImage(image, imageUrl, originalUrl, line, lineNumber, span, scale, filepath);
             }
-
-            if (imageUrl.ToLower().StartsWith("http"))
+            else
             {
-               if (ImageCache.Instance.TryGetValue(imageUrl, out string localPath))
-               {
-                  imageUrl = localPath;
-               }
+               if (Images.ContainsKey(lineNumber))
+                  Images.Remove(lineNumber);
             }
-            ProcessImage(image, imageUrl, originalUrl, line, lineNumber, span, scale, filepath);
          }
-         else
+         catch(Exception ex)
          {
-            if (Images.ContainsKey(lineNumber))
-               Images.Remove(lineNumber);
+            ExceptionHandler.Notify(ex, true);
          }
       }
 
       private void Client_DownloadDataCompleted(object sender, DownloadDataCompletedEventArgs e)
       {
-         var client = sender as WebClient;
-
-         client.DownloadDataCompleted -= Client_DownloadDataCompleted;
-
-         if (_toaddImages.TryGetValue(client, out ImageParameters item))
+         try
          {
-            byte[] data = e.Result;
-            File.WriteAllBytes(item.LocalPath, data);
-            ImageCache.Instance.Add(item.Uri, item.LocalPath);
-            _processingUris.Remove(item.Uri);
+            var client = sender as WebClient;
 
-            ProcessImage(item.Image, 
-               item.LocalPath, 
-               item.Uri, 
-               item.Line, 
-               item.LineNumber, 
-               item.Span, 
-               item.Scale,
-               item.Filepath);
+            client.DownloadDataCompleted -= Client_DownloadDataCompleted;
 
-            _toaddImages.Remove(client);
+            if (_toaddImages.TryGetValue(client, out ImageParameters item))
+            {
+               byte[] data = e.Result;
+               File.WriteAllBytes(item.LocalPath, data);
+               ImageCache.Instance.Add(item.Uri, item.LocalPath);
+               _processingUris.Remove(item.Uri);
+
+               ProcessImage(item.Image,
+                  item.LocalPath,
+                  item.Uri,
+                  item.Line,
+                  item.LineNumber,
+                  item.Span,
+                  item.Scale,
+                  item.Filepath);
+
+               _toaddImages.Remove(client);
+            }
+         }
+         catch(Exception ex)
+         {
+            ExceptionHandler.Notify(ex, true);
          }
       }
 
       private void ProcessImage(CommentImage image, string imageUrl, string originalUrl, ITextViewLine line, int lineNumber, SnapshotSpan span, double scale, string filepath)
       {
-         var result = image.TrySet(
-            imageUrl,
-            originalUrl,
-            scale,
-            filepath,
-            out Exception imageLoadingException);
-
-         // Position image and add as adornment
-         if (imageLoadingException == null)
+         try
          {
-            AddAdorment(image, line, lineNumber, span);
+            var result = image.TrySet(
+               imageUrl,
+               originalUrl,
+               scale,
+               filepath,
+               out Exception imageLoadingException);
+
+            // Position image and add as adornment
+            if (imageLoadingException == null)
+            {
+               AddAdorment(image, line, lineNumber, span);
+            }
+            else
+            {
+               if (Images.ContainsKey(lineNumber))
+                  Images.Remove(lineNumber);
+
+               _errorTags.Add(
+                  new TagSpan<ErrorTag>(
+                     span,
+                     new ErrorTag("Trouble loading image", GetErrorMessage(imageLoadingException))));
+            }
          }
-         else
+         catch(Exception ex)
          {
-            if (Images.ContainsKey(lineNumber))
-               Images.Remove(lineNumber);
-
-            _errorTags.Add(
-               new TagSpan<ErrorTag>(
-                  span,
-                  new ErrorTag("Trouble loading image", GetErrorMessage(imageLoadingException))));
+            ExceptionHandler.Notify(ex, true);
          }
       }
 
