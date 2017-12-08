@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,7 +10,7 @@ namespace MemefulComments
 {
    class ImageCache
    {
-      ThreadSafeDictionary<string, string> _imageMap = new ThreadSafeDictionary<string, string>();
+      ConcurrentDictionary<string, string> _imageMap = new ConcurrentDictionary<string, string>();
       private ImageCache() { }
       ~ImageCache()
       {
@@ -23,31 +24,19 @@ namespace MemefulComments
          }
       }
 
-      private static ImageCache _instance;
-      private static object _lock = new object();
+      private static Lazy<ImageCache> _instance = new Lazy<ImageCache>(true);
 
       public static ImageCache Instance
       {
          get
          {
-            if(_instance == null)
-            {
-               lock(_lock)
-               {
-                  if(_instance == null)
-                  {
-                     _instance = new ImageCache();
-                  }
-               }
-            }
-
-            return _instance;
+            return _instance.Value;
          }
       }
-         
+
       public void Add(string uri, string local)
       {
-         _imageMap.Add(uri, local);
+         _imageMap.GetOrAdd(uri, local);
       }
 
       public bool TryGetValue(string uri, out string local)
