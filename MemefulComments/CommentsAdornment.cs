@@ -11,6 +11,7 @@ using System.Xml;
 using System.Windows;
 using System.Net;
 using System.IO;
+using System.Collections.Concurrent;
 
 namespace MemefulComments
 {
@@ -31,14 +32,13 @@ namespace MemefulComments
       public static void ToggleEnabled()
       {
          Enabled = !Enabled;
-         string message = string.Format("Memeful comments {0}. Scroll editor window(s) to update.",
-             Enabled ? "enabled" : "disabled");
+         string message = "Memeful comments " + (Enabled ? "enabled" : "disabled") + ". Scroll editor window(s) to update.";
          UIMessage.Show(message);
       }
 
       public static bool Enabled { get; set; }
 
-      public ThreadSafeDictionary<int, CommentImage> Images { get; set; }
+      public ConcurrentDictionary<int, CommentImage> Images { get; set; }
 
       private IAdornmentLayer _layer;
       private IWpfTextView _view;
@@ -49,8 +49,8 @@ namespace MemefulComments
       private List<ITagSpan<ErrorTag>> _errorTags;
 
       private List<string> _processingUris = new List<string>();
-      private ThreadSafeDictionary<WebClient, ImageParameters> _toaddImages = new ThreadSafeDictionary<WebClient, ImageParameters>();
-      private ThreadSafeDictionary<int, ITextViewLine> _editedLines = new ThreadSafeDictionary<int, ITextViewLine>();
+      private ConcurrentDictionary<WebClient, ImageParameters> _toaddImages = new ConcurrentDictionary<WebClient, ImageParameters>();
+      private ConcurrentDictionary<int, ITextViewLine> _editedLines = new ConcurrentDictionary<int, ITextViewLine>();
 
       private System.Timers.Timer _timer = new System.Timers.Timer(200);
 
@@ -71,7 +71,7 @@ namespace MemefulComments
          _textDocumentFactory = textDocumentFactory;
          _view = view;
          _layer = view.GetAdornmentLayer("CommentImageAdornmentLayer");
-         Images = new ThreadSafeDictionary<int, CommentImage>();
+         Images = new ConcurrentDictionary<int, CommentImage>();
          _view.LayoutChanged += OnLayoutChanged;
 
          _contentTypeName = view.TextBuffer.ContentType.TypeName;
@@ -111,7 +111,7 @@ namespace MemefulComments
 
             ResetTimer();
 
-            // Sometimes, on loading a file in an editor view, the line transform gets triggered before the image adornments 
+            // Sometimes, on loading a file in an editor view, the line transform gets triggered before the image adornments
             // have been added, so the lines don't resize to the image height. So here's a workaround:
             // Changing the zoom level triggers the required update.
             // Need to do it twice - once to trigger the event, and again to change it back to the user's expected level.
@@ -186,10 +186,10 @@ namespace MemefulComments
 
                if (xmlParseException != null)
                {
-                  if (Images.ContainsKey(lineNumber))
+                  CommentImage commentImage;
+                  if (Images.TryRemove(lineNumber, out commentImage))
                   {
-                     _layer.RemoveAdornment(Images[lineNumber]);
-                     Images.Remove(lineNumber);
+                     _layer.RemoveAdornment(commentImage);
                   }
 
                   _errorTags.Add(
@@ -200,38 +200,33 @@ namespace MemefulComments
                   return;
                }
 
-               // Check for and update existing image
-               CommentImage image = Images.ContainsKey(lineNumber) ? Images[lineNumber] : null;
                var reload = false;
-               if (image != null)
+               CommentImage image = Images.AddOrUpdate(lineNumber, ln =>
                {
-                  if (image.OriginalUrl == imageUrl && image.Scale != scale)
-                  {
-                     // URL same but scale changed
-                     image.Scale = scale;
-                     reload = true;
-                  }
-                  else if (image.OriginalUrl != imageUrl)
-                  {
-                     // URL different, must load from new source
-                     reload = true;
-                  }
-               }
-               else
+                   reload = true;
+                   return new CommentImage();
+               }, (ln, img) =>
                {
-                  // no existing image, so create new one
-                  image = new CommentImage();
-                  Images.Add(lineNumber, image);
-
-                  reload = true;
-               }
+                   if (img.OriginalUrl == imageUrl && img.Scale != scale)
+                   {
+                       // URL same but scale changed
+                       img.Scale = scale;
+                       reload = true;
+                   }
+                   else if (img.OriginalUrl != imageUrl)
+                   {
+                       // URL different, must load from new source
+                       reload = true;
+                   }
+                   return img;
+               });
 
                var originalUrl = imageUrl;
                if (reload)
                {
                   if (_processingUris.Contains(imageUrl)) return;
 
-                  if (imageUrl.ToLower().StartsWith("http"))
+                  if (imageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                   {
                      if (ImageCache.Instance.TryGetValue(imageUrl, out string localPath))
                      {
@@ -244,7 +239,7 @@ namespace MemefulComments
                         WebClient client = new WebClient();
                         client.DownloadDataCompleted += Client_DownloadDataCompleted;
 
-                        _toaddImages.Add(
+                        _toaddImages.TryAdd(
                            client,
                            new ImageParameters()
                            {
@@ -265,7 +260,7 @@ namespace MemefulComments
                   }
                }
 
-               if (imageUrl.ToLower().StartsWith("http"))
+               if (imageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                {
                   if (ImageCache.Instance.TryGetValue(imageUrl, out string localPath))
                   {
@@ -276,8 +271,7 @@ namespace MemefulComments
             }
             else
             {
-               if (Images.ContainsKey(lineNumber))
-                  Images.Remove(lineNumber);
+               Images.TryRemove(lineNumber, out var value);
             }
          }
          catch(Exception ex)
@@ -310,7 +304,7 @@ namespace MemefulComments
                   item.Scale,
                   item.Filepath);
 
-               _toaddImages.Remove(client);
+               _toaddImages.TryRemove(client, out var value);
             }
          }
          catch(Exception ex)
@@ -337,8 +331,7 @@ namespace MemefulComments
             }
             else
             {
-               if (Images.ContainsKey(lineNumber))
-                  Images.Remove(lineNumber);
+               Images.TryRemove(lineNumber, out var value);
 
                _errorTags.Add(
                   new TagSpan<ErrorTag>(
@@ -378,10 +371,10 @@ namespace MemefulComments
          {
             _layer.RemoveAdornment(element);
             _layer.AddAdornment(
-               AdornmentPositioningBehavior.TextRelative, 
-               line.Extent, 
-               null, 
-               element, 
+               AdornmentPositioningBehavior.TextRelative,
+               line.Extent,
+               null,
+               element,
                null);
          }
          catch (Exception ex)
@@ -391,7 +384,7 @@ namespace MemefulComments
          }
       }
 
-      private string GetErrorMessage(Exception exception)
+      private static string GetErrorMessage(Exception exception)
       {
          Trace.WriteLine("Problem parsing comment text or loading image...\n" + exception);
 
@@ -430,6 +423,7 @@ namespace MemefulComments
             if (disposing)
             {
                UnsubscribeFromViewerEvents();
+               _timer.Dispose();
             }
 
             // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
