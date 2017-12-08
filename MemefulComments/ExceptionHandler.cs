@@ -6,7 +6,7 @@ namespace MemefulComments
    {
       public static void Notify(Exception ex, bool showMessage)
       {
-         string message = $"{DateTime.Now}: {ex.ToString()}";
+         string message = $"{DateTime.Now}: {ex}";
          Console.WriteLine(message);
          if (showMessage)
          {

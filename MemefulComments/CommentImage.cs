@@ -81,7 +81,7 @@ namespace MemefulComments
 
          image.BeginInit();
          image.UriSource = new Uri(uri, UriKind.Absolute);
-         image.EndInit();         
+         image.EndInit();
 
          if(!image.IsDownloading)
          {
@@ -97,11 +97,11 @@ namespace MemefulComments
             };
          }
 
-         if(Path.GetExtension(uri).ToLower() == ".gif")
+         if(string.Equals(Path.GetExtension(uri), ".gif", StringComparison.OrdinalIgnoreCase))
             ImageBehavior.SetAnimatedSource(this, image);
 
          return image;
-      }      
+      }
 
       public override string ToString()
       {

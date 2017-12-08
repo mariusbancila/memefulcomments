@@ -62,7 +62,6 @@
     <Compile Include="CommentImageParser.cs" />
     <Compile Include="ImageCache.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ThreadSafeDictionary.cs" />
     <Compile Include="UIMessage.cs" />
   </ItemGroup>
   <ItemGroup>
