@@ -190,6 +190,7 @@ namespace MemefulComments
                   if (Images.TryRemove(lineNumber, out commentImage))
                   {
                      _layer.RemoveAdornment(commentImage);
+                     commentImage.Dispose();
                   }
 
                   _errorTags.Add(
@@ -271,7 +272,8 @@ namespace MemefulComments
             }
             else
             {
-               Images.TryRemove(lineNumber, out var value);
+               Images.TryRemove(lineNumber, out var commentImage);
+               commentImage.Dispose();
             }
          }
          catch(Exception ex)
@@ -331,7 +333,8 @@ namespace MemefulComments
             }
             else
             {
-               Images.TryRemove(lineNumber, out var value);
+               Images.TryRemove(lineNumber, out var commentImage);
+               commentImage.Dispose();
 
                _errorTags.Add(
                   new TagSpan<ErrorTag>(
