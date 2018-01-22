@@ -24,7 +24,7 @@ namespace MemefulComments
          }
       }
 
-      private static Lazy<ImageCache> _instance = new Lazy<ImageCache>(true);
+      private static Lazy<ImageCache> _instance = new Lazy<ImageCache>(() => new ImageCache());
 
       public static ImageCache Instance
       {

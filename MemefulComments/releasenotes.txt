@@ -1,7 +1,11 @@
 Memeful Comments Release Notes
-=================================
-copyright Marius Bancila (c) 2017
-=================================
+========================================
+copyright Marius Bancila (c) 2017 - 2018
+========================================
+
+v1.3.0
+- reloading images if they change
+- performance improvements and bug fixes
 
 v1.2.0
 - fixed problem with Visual Studio hanging
