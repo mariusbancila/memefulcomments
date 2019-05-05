@@ -1,7 +1,13 @@
 Memeful Comments Release Notes
 ========================================
-copyright Marius Bancila (c) 2017 - 2018
+copyright Marius Bancila (c) 2017 - 2019
 ========================================
+
+v1.4.0
+- support for Visual Studio 2019
+- support for Python
+- support for environment variables $(SolutionDir) and $(ProjectDir)
+- fixed bug with images from collapsed blocks still showing
 
 v1.3.0
 - reloading images if they change

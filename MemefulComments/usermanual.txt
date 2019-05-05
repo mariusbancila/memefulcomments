@@ -39,3 +39,7 @@ or
 JavaScript/TypeScript
 =====================
 // <image url="http://i.memeful.com/media/post/oMJNPM9_700wa_0.gif" scale="0.75" />
+
+Python
+=====================
+# <image url="http://i.memeful.com/media/post/oMJNPM9_700wa_0.gif" scale="0.75" />
