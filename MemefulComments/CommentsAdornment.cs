@@ -175,6 +175,13 @@ namespace MemefulComments
          try
          {
             var lineText = line.Extent.GetText();
+            var lines = lineText.Split(
+               new string[] { Environment.NewLine }, 
+               StringSplitOptions.RemoveEmptyEntries);
+            // multiline mean a block of code is collapsed
+            // do not display pics from the collapsed text
+            if (lines.Length > 1)
+               return;
             var matchIndex = CommentImageParser.Match(_contentTypeName, lineText, out string matchedText);
             if (matchIndex >= 0)
             {
