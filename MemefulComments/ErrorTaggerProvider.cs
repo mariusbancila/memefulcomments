@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.Text;
+﻿using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
@@ -22,6 +23,9 @@ namespace MemefulComments
       [Import]
       public ITextDocumentFactoryService TextDocumentFactory { get; set; }
 
+      [Import]
+      internal SVsServiceProvider ServiceProvider = null;
+
       public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) 
          where T : ITag
       {
@@ -37,7 +41,7 @@ namespace MemefulComments
 
          Trace.Assert(textView is IWpfTextView);
 
-         var imageAdornmentManager = textView.Properties.GetOrCreateSingletonProperty(() => new CommentsAdornment((IWpfTextView)textView, TextDocumentFactory));
+         var imageAdornmentManager = textView.Properties.GetOrCreateSingletonProperty(() => new CommentsAdornment((IWpfTextView)textView, TextDocumentFactory, ServiceProvider));
          return imageAdornmentManager as ITagger<T>;
       }
    }

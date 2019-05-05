@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Shell;
 
 namespace MemefulComments
 {
@@ -38,6 +39,9 @@ namespace MemefulComments
       [Import]
       public ITextDocumentFactoryService TextDocumentFactory { get; set; }
 
+      [Import]
+      internal SVsServiceProvider ServiceProvider = null;
+
       #region IWpfTextViewCreationListener
 
       /// <summary>
@@ -47,7 +51,7 @@ namespace MemefulComments
       /// <param name="textView">The <see cref="IWpfTextView"/> upon which the adornment should be placed</param>
       public void TextViewCreated(IWpfTextView textView)
       {
-         textView.Properties.GetOrCreateSingletonProperty(() => new CommentsAdornment(textView, TextDocumentFactory));
+         textView.Properties.GetOrCreateSingletonProperty(() => new CommentsAdornment(textView, TextDocumentFactory, ServiceProvider));
       }
 
       #endregion

@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.Text;
+﻿using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Utilities;
@@ -21,9 +22,12 @@ namespace MemefulComments
       [Import]
       public ITextDocumentFactoryService TextDocumentFactory { get; set; }
 
+      [Import]
+      internal SVsServiceProvider ServiceProvider = null;
+
       ILineTransformSource ILineTransformSourceProvider.Create(IWpfTextView view)
       {
-         var manager = view.Properties.GetOrCreateSingletonProperty(() => new CommentsAdornment(view, TextDocumentFactory));
+         var manager = view.Properties.GetOrCreateSingletonProperty(() => new CommentsAdornment(view, TextDocumentFactory , ServiceProvider));
          return new CommentLineTransformSource(manager);
       }
    }

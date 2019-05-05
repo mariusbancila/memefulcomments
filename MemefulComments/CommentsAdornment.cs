@@ -12,6 +12,7 @@ using System.Windows;
 using System.Net;
 using System.IO;
 using System.Collections.Concurrent;
+using Microsoft.VisualStudio.Shell;
 
 namespace MemefulComments
 {
@@ -42,6 +43,7 @@ namespace MemefulComments
 
       private IAdornmentLayer _layer;
       private IWpfTextView _view;
+      private VariableExpander _variableExpander;
       private ITextDocumentFactoryService _textDocumentFactory;
       private string _contentTypeName;
       private bool _initialised1 = false;
@@ -66,7 +68,7 @@ namespace MemefulComments
          public string Filepath { get; set; }
       }
 
-      public CommentsAdornment(IWpfTextView view, ITextDocumentFactoryService textDocumentFactory)
+      public CommentsAdornment(IWpfTextView view, ITextDocumentFactoryService textDocumentFactory, SVsServiceProvider serviceProvider)
       {
          _textDocumentFactory = textDocumentFactory;
          _view = view;
@@ -78,6 +80,7 @@ namespace MemefulComments
          _view.TextBuffer.ContentTypeChanged += OnContentTypeChanged;
 
          _errorTags = new List<ITagSpan<ErrorTag>>();
+         _variableExpander = new VariableExpander(_view, serviceProvider);
 
          _timer.Elapsed += _timer_Elapsed;
       }
@@ -205,7 +208,7 @@ namespace MemefulComments
                CommentImage image = Images.AddOrUpdate(lineNumber, ln =>
                {
                    reload = true;
-                   return new CommentImage();
+                   return new CommentImage(_variableExpander);
                }, (ln, img) =>
                {
                    if (img.OriginalUrl == imageUrl && img.Scale != scale)
