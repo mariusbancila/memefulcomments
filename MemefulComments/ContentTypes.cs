@@ -15,5 +15,7 @@
       public const string Xaml = "XAML";
       public const string Xml = "XML";
       public const string TypeScript = "TypeScript";
+      public const string Python = "Python";
+      public const string Java = "Java";
    }
 }

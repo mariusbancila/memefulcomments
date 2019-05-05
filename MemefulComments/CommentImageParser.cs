@@ -21,6 +21,9 @@ namespace MemefulComments
          var fSharpCommentPattern = @"\(\*.*";
          _fSharpImageCommentRegex = new Regex(fSharpCommentPattern + xmlImageTagPattern, RegexOptions.Compiled);
 
+         var pythonCommentPattern = @"#.*";
+         _pythonImageCommentRegex = new Regex(pythonCommentPattern + xmlImageTagPattern, RegexOptions.Compiled);
+
          _xmlImageTagRegex = new Regex(xmlImageTagPattern, RegexOptions.Compiled);
       }
 
@@ -40,6 +43,7 @@ namespace MemefulComments
             {
                case ContentTypes.Cpp:
                case ContentTypes.CSharp:
+               case ContentTypes.Java:
                case ContentTypes.JavaScript:
                case ContentTypes.TypeScript:
                   match = _csharpImageCommentRegex.Match(lineText);
@@ -56,6 +60,9 @@ namespace MemefulComments
                   if (match == null || string.IsNullOrEmpty(match.Value)) 
                      // just match <image, could be in a multi-line comment
                      match = _xmlImageTagRegex.Match(lineText);
+                  break;
+               case ContentTypes.Python:
+                  match = _pythonImageCommentRegex.Match(lineText);
                   break;
                default:
                   Console.WriteLine("Unsupported content type: " + contentTypeName);
@@ -130,5 +137,6 @@ namespace MemefulComments
       private static Regex _csharpImageCommentRegex;
       private static Regex _vbImageCommentRegex;
       private static Regex _xmlImageTagRegex;
+      private static Regex _pythonImageCommentRegex;
    }
 }

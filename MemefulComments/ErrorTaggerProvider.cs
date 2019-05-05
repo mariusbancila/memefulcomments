@@ -13,7 +13,9 @@ namespace MemefulComments
     ContentType(ContentTypes.VisualBasic),
     ContentType(ContentTypes.FSharp),
     ContentType(ContentTypes.JavaScript),
-    ContentType(ContentTypes.TypeScript)]
+    ContentType(ContentTypes.TypeScript),
+    ContentType(ContentTypes.Python),
+    ContentType(ContentTypes.Java)]
    [TagType(typeof(ErrorTag))]
    internal class ErrorTaggerProvider : IViewTaggerProvider
    {
